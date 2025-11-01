@@ -1,17 +1,28 @@
 import base64
 import tempfile
 from pathlib import Path
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, Header, HTTPException
 from .infer import generate_talking_head  # ← relative import
+import os
 
 app = FastAPI()
+
+
+@app.get("/health")
+async def health():
+    return {"ok": True}
 
 
 @app.post("/generateVideo")
 async def generate_video(
     face: UploadFile = File(...),
     audio: UploadFile = File(...),
+    x_api_key: str = Header(None),
 ):
+    # simple header check
+    if x_api_key != os.environ.get("SADTALKER_API_KEY", "supersecret-local"):
+        raise HTTPException(status_code=401, detail="unauthorized")
+
     # make a temp working dir per request
     workdir = Path(tempfile.mkdtemp(prefix="sadtalker_"))
 
